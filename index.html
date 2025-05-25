@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Anonim</title>
+    <style>
+        body { font-family: sans-serif; background: #111; color: #fff; padding: 10px; }
+        #chatBox { max-height: 400px; overflow-y: scroll; border: 1px solid #333; padding: 5px; margin-bottom: 10px; }
+        input, button { padding: 8px; }
+    </style>
+</head>
+<body>
+    <h2>Chat Anonim</h2>
+    <div id="chatBox"></div>
+    <input type="text" id="inputMsg" placeholder="Tulis pesan..." />
+    <button id="sendBtn">Kirim</button>
+    <button id="setNameBtn">Ganti Nama</button>
+
+    <script>
+        let deviceId = localStorage.getItem('deviceId');
+        if (!deviceId) {
+            deviceId = 'id-' + Math.floor(Math.random() * 1000000);
+            localStorage.setItem('deviceId', deviceId);
+        }
+
+        let userName = localStorage.getItem('userName');
+        if (!userName) {
+            userName = 'user-' + Math.floor(Math.random() * 100000);
+            localStorage.setItem('userName', userName);
+        }
+
+        const chatBox = document.getElementById('chatBox');
+        const inputMsg = document.getElementById('inputMsg');
+        const sendBtn = document.getElementById('sendBtn');
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadMessages() {
+            const res = await fetch('https://data.gogle.biz.id/chat/get.php');
+            const data = await res.json();
+            chatBox.innerHTML = data.messages.map(m =>
+                `<div><strong>${escapeHtml(m.userName)}:</strong> ${escapeHtml(m.message)}</div>`
+            ).join('');
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        sendBtn.onclick = async () => {
+            const pesan = inputMsg.value.trim();
+            if (!pesan) return;
+
+            sendBtn.disabled = true;
+            await fetch('https://data.gogle.biz.id/chat/send.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    deviceId: deviceId,
+                    userName: userName,
+                    message: pesan
+                })
+            });
+            inputMsg.value = '';
+            await loadMessages();
+            sendBtn.disabled = false;
+        };
+
+        document.getElementById('setNameBtn').onclick = () => {
+            const newName = prompt('Masukkan nama baru:', userName);
+            if (newName) {
+                userName = newName.trim();
+                localStorage.setItem('userName', userName);
+                alert('Nama berhasil diubah ke ' + userName);
+            }
+        };
+
+        setInterval(loadMessages, 1000); 
+        loadMessages();
+    </script>
+</body>
+</html>
